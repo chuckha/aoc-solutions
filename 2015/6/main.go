@@ -25,11 +25,13 @@ func main() {
 	}
 	l := &lights{}
 	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
 		action, x1, y1, x2, y2 := parseLine(line)
 		l.act(action, x1, y1, x2, y2)
-		fmt.Println(l.lit())
-		os.Exit(0)
 	}
+	fmt.Println(l.brightness())
 }
 
 func parseLine(in string) (int, int, int, int, int) {
@@ -63,19 +65,18 @@ type lights [1000][1000]int
 
 func (l *lights) lights(action, x, y int) {
 	if action == on {
-		l[y][x] = on
+		l[y][x]++
 		return
 	}
 	if action == off {
-		l[y][x] = off
+		l[y][x]--
+		if l[y][x] < 0 {
+			l[y][x] = 0
+		}
 		return
 	}
 	// toggle
-	if l[y][x] == on {
-		l[y][x] = off
-		return
-	}
-	l[y][x] = on
+	l[y][x] += 2
 }
 
 func (l *lights) act(action, x1, y1, x2, y2 int) {
@@ -93,6 +94,16 @@ func (l *lights) lit() int {
 			if light == on {
 				c++
 			}
+		}
+	}
+	return c
+}
+
+func (l *lights) brightness() int {
+	c := 0
+	for _, row := range l {
+		for _, light := range row {
+			c += light
 		}
 	}
 	return c
