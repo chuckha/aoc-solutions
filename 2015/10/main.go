@@ -6,70 +6,60 @@ import (
 )
 
 func main() {
-	cur := "1"
-	for i := 0; i < 5; i++ {
-		cur = gen(cur)
-		fmt.Println(cur)
+	cur := "1321131112"
+	for i := 0; i < 50; i++ {
+		cur = join(split(cur))
 	}
-	fmt.Println(cur)
+	fmt.Println(len(cur))
 }
 
-// 1 -> 11
-// 11 -> 21
-// 21 -> 1211
-func gen(in string) string {
-	fmt.Println("going in", in)
-	memo := map[string]string{}
-
-	if len(in) == 1 {
-		val := make(in)
-		memo[in] = val
-		return val
-	}
-	out := []string{}
-	hold := []byte{}
-	for i := 0; i < len(in); i++ {
-		if len(hold) == 0 {
-			hold = append(hold, in[i])
-			continue
-		}
-		if in[i] == hold[len(hold)-1] {
-			hold = append(hold, in[i])
-			continue
-		}
-		// do something with hold
-		key := string(hold)
-		val, ok := memo[key]
-		if !ok {
-			val = gen(key)
-			memo[key] = val
-		}
-		out = append(out, val)
-		// clear hold
-		hold = []byte{}
-	}
-	fmt.Println("before flush", hold)
-	// flush hold
-	key := string(hold)
-	val, ok := memo[key]
-	if !ok {
-		val = gen(key)
-		memo[key] = val
-	}
-	out = append(out, val)
-
-	return strings.Join(out, "")
+type count struct {
+	occurances int
+	number     string
 }
 
-func make(in string) string {
-	if in == "1" {
-		return "11"
+func (c count) String() string {
+	return fmt.Sprintf("%d%s", c.occurances, c.number)
+}
+
+func join(counts []count) string {
+	var b strings.Builder
+	for _, c := range counts {
+		b.WriteString(c.String())
 	}
-	if in == "2" {
-		return "12"
+	return b.String()
+}
+
+func split(in string) []count {
+	var cur rune
+	i := 0
+	out := []count{}
+	for j, c := range in {
+		if j == len(in)-1 {
+			if c == cur {
+				i++
+				out = append(out, count{i, string(cur)})
+				return out
+			}
+			if cur != 0 {
+				out = append(out, count{i, string(cur)})
+			}
+			out = append(out, count{1, string(c)})
+			return out
+		}
+		if cur == 0 {
+			i++
+			cur = c
+			continue
+		}
+		if c == cur {
+			i++
+			continue
+		}
+		out = append(out, count{i, string(cur)})
+		i = 1
+		cur = c
 	}
-	if in == "3" {
-		return "13"
-	}
-	panic(fmt.Sprintf("unknown, %s", in))
+
+	return out
 }
