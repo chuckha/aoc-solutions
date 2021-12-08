@@ -69,6 +69,8 @@ func newDisplay() *display {
 }
 
 // in is "cfagb bag cbgfd fbagc"
+// the output value looks up the location of each segment for each digit.
+// it then builds up the actual number and converts it to a decimal integer.
 func (d *display) outputValue(in []string) int {
 	digits := []int{}
 	for _, word := range in {
@@ -91,6 +93,9 @@ func (d *display) String() string {
 	return strings.Join(out, "\n")
 }
 
+// given a word, split the display segments into "in the word" and "not in the word"
+// example: ae will get segments 2,5 as "in" and all others as out
+// this allows us to remove possibilities easily.
 func (d *display) groupSegments(letters []string) ([]*segment, []*segment) {
 	inGroup := make([]*segment, 0)
 	outGroup := make([]*segment, 0)
@@ -105,6 +110,8 @@ func (d *display) groupSegments(letters []string) ([]*segment, []*segment) {
 }
 
 // info takes something like 'ab'
+// This is the deduction logic engine. Remove possibilities one at a time
+// until only one option is remaining.
 func (d *display) info(in []string) {
 	// if its two letters, it must be trying to display a 1
 	if len(in) == 2 {
@@ -163,6 +170,7 @@ func (d *display) info(in []string) {
 }
 
 /*
+This is the location of segments to be used consistently
  000
 1   2
 1   2
@@ -172,6 +180,8 @@ func (d *display) info(in []string) {
  666
 */
 
+// in must be sorted
+// translate translates segment locations to real digits
 func translate(in []int) int {
 	if internal.EqualSlice(in, []int{0, 1, 2, 4, 5, 6}) {
 		return 0
