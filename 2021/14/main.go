@@ -19,12 +19,8 @@ func main() {
 	pairCounts := countPairs(rules, start)
 	letterCounts := countLetters(start)
 	for i := 0; i < 40; i++ {
-		///		fmt.Println(countLetters(start), len(start))
-		//		fmt.Println(countPairs(rules, start))
 		pairCounts, letterCounts = nextRound(pairCounts, letterCounts, rules)
-		///		start = ruleApplications(rules, pairSplit(start))
 	}
-	//	fmt.Println(letterCounts)
 	fmt.Println(mostAndLeastv2(letterCounts))
 }
 
