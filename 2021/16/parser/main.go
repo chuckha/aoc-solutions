@@ -7,6 +7,9 @@ import (
 	"github.com/chuckha/aoc-solutions/internal"
 )
 
+//                                      22
+// 011 000 1 00000000010 000 000 0 000000000010110 0001000101010110001011001000100000000010000100011000111000110100
+
 const (
 	version          = "version"
 	typeID           = "typeID"
@@ -15,7 +18,14 @@ const (
 	elevenBitNumber  = "elevenBitNumber"
 	lengthTypeID     = "lengthTypeID"
 	subpackets       = "subpackets"
+
+	litValueTypeID = 4
 )
+
+func binToDec(in string) int {
+	out, _ := strconv.ParseInt(in, 2, 64)
+	return int(out)
+}
 
 /*
 * 620080001611562C8802118E34 represents an operator packet (version 3) which
@@ -26,16 +36,37 @@ two literal values. This packet has a version sum of 12.
 func main() {
 	lines := internal.ReadInput()
 	fmt.Println(hexToBin(lines[0]))
-	tokens := make(chan item)
 	l := &lex{
-		input:  hexToBin(lines[0]),
-		tokens: tokens,
+		input: hexToBin(lines[0]),
 	}
-	//	versionsum := 0
-	go l.run() // terminates after its done parsing
-	for token := range tokens {
+	tlps := l.run()
+	parseSubpacket(tlps[0])
+	fmt.Println(tlps)
+}
 
-		fmt.Println(token)
+func nextPacket(data string) string {
+	packetType := data[2:5]
+	if packetType == "010" {
+		return "literal"
+	}
+	return "op"
+}
+
+func parseSubpacket(tlp *packet) {
+	fmt.Println(tlp)
+	fmt.Println("parsing new data", tlp.subpacketData)
+	l := &lex{input: tlp.subpacketData}
+	tlps := l.run()
+	fmt.Println("me", tlps)
+	if len(tlps) == 0 {
+		fmt.Println("Failed to parse a packet?")
+		panic("bad news")
+	}
+	tlp.subpackets = tlps
+	for _, tlp := range tlp.subpackets {
+		if tlp.subpacketData != "" {
+			parseSubpacket(tlp)
+		}
 	}
 }
 
@@ -47,11 +78,11 @@ type packet struct {
 	literalValue int
 
 	// operator packet only
-	lengthTypeID     int
-	fifteenBitnumber int
-	elevenBitNumber  int
-	size             int
-	subpackets       []*packet
+	lengthTypeID   int
+	fifteenBitData int
+	elevenBitData  int
+	subpacketData  string
+	subpackets     []*packet
 }
 
 func (p *packet) String() string {
@@ -59,7 +90,7 @@ func (p *packet) String() string {
 		return fmt.Sprintf("LVP: %d", p.literalValue)
 	}
 	if p.typeID != 4 {
-		return fmt.Sprintf("OP: {}")
+		return fmt.Sprintf("OP (%s): {%v}", p.subpacketData, p.subpackets)
 	}
 	return ""
 }
@@ -105,17 +136,18 @@ func (i item) String() string {
 }
 
 type lex struct {
-	input  string
-	pos    int
-	start  int
-	tokens chan item
+	input   string
+	pos     int
+	start   int
+	packet  *packet
+	packets []*packet
 }
 
-func (l *lex) run() {
+func (l *lex) run() []*packet {
 	for state := versionFn; state != nil; {
 		state = state(l)
 	}
-	close(l.tokens)
+	return l.packets
 }
 
 func (l *lex) next() string {
@@ -135,47 +167,46 @@ func (l *lex) peek() string {
 func (l *lex) ignore() {
 	l.start = l.pos
 }
-
-func (l *lex) send(kind string) {
-	l.tokens <- item{
-		kind:  kind,
-		value: l.input[l.start:l.pos],
-		bits:  l.pos - l.start,
-	}
-	l.start = l.pos
+func (l *lex) value() string {
+	return l.input[l.start:l.pos]
 }
+
 func (l *lex) errorf(error string) stateFn {
-	l.tokens <- item{
-		kind:  "error",
-		value: error,
-	}
+	fmt.Println(error)
 	return nil
 }
 
 type stateFn func(*lex) stateFn
 
+// 001 010 1 0110001011001000100000000010000100011000111000110100
 func versionFn(l *lex) stateFn {
+	fmt.Println("parsing version", l.input[l.pos:])
+	l.packet = &packet{}
 	for i := 0; i < 3; i++ {
 		if l.next() == "EOF" {
 			return l.errorf("found an early end in a version")
 		}
 	}
-	l.send(version)
+	v, _ := strconv.ParseInt(l.value(), 2, 64)
+	l.packet.version = int(v)
+	l.ignore()
+	//	l.send(version)
 	return packetType
 }
 
 func packetType(l *lex) stateFn {
-	pt := ""
+	fmt.Println("parsing packet type")
 	for i := 0; i < 3; i++ {
-		c := l.next()
-		if c == "EOF" {
+		if l.next() == "EOF" {
 			return l.errorf("bad input, end came after a version")
 		}
-		pt += c
 	}
-	l.send(typeID)
-	switch pt {
-	case "100":
+	pact, _ := strconv.ParseInt(l.value(), 2, 64)
+	l.packet.typeID = int(pact)
+	l.ignore()
+	//	l.send(typeID)
+	switch pact {
+	case litValueTypeID:
 		return litValue
 	default:
 		return operatorValue
@@ -183,108 +214,97 @@ func packetType(l *lex) stateFn {
 }
 
 func litValue(l *lex) stateFn {
-	// is it the last bit in a literal value?
-	c := l.next()
-	if c == "EOF" {
-		return l.errorf("invalid end found in the middle of a literal value")
-	}
-	if c == "0" {
-		return lastLiteralValue
-	}
-	if c != "1" {
-		return l.errorf("invalid character in literal value header")
-	}
-	return notLastLiteralValue
-}
-
-func lastLiteralValue(l *lex) stateFn {
-	for i := 0; i < 4; i++ {
-		c := l.next()
-		if c == "EOF" {
-			return l.errorf("bad end in what should be last literal value")
+	fmt.Println("parsing lit val")
+	// read 5 at a time until you find a 5 that starts with 0
+	num := ""
+	for {
+		stop := false
+		header := l.next()
+		if header == "0" || header == "EOF" {
+			stop = true
+		}
+		l.ignore()
+		for j := 0; j < 4; j++ {
+			l.next()
+		}
+		num += l.value()
+		if stop {
+			break
 		}
 	}
-	l.send(literalValue)
-	if l.peek() == "EOF" {
-		return nil
-	}
-	// slurp the rest of the unnecessary bits
-	for (l.pos-l.start)%4 != 0 {
-		l.next()
-	}
-	// read one more char because this will be off by 1 above
-	if l.peek() == "EOF" {
-		return nil
-	}
+	litVal, _ := strconv.ParseInt(num, 2, 64)
+	l.packet.literalValue = int(litVal)
 	l.ignore()
-	if len(l.input)-l.pos < 8 {
+	l.packets = append(l.packets, l.packet)
+	if len(l.input[l.pos:]) < 8 {
 		return nil
 	}
 	return versionFn
 }
 
-func notLastLiteralValue(l *lex) stateFn {
-	for i := 0; i < 4; i++ {
-		c := l.next()
-		if c == "EOF" {
-			return l.errorf("bad end in what should be last literal value")
-		}
-	}
-	return litValue
-}
-
 func operatorValue(l *lex) stateFn {
-	n := l.next()
-	if n == "EOF" {
+	fmt.Println("parsing op value")
+	fmt.Println(l.input[l.start:l.pos], l.start, l.pos)
+	if l.next() == "EOF" {
 		return l.errorf("should be length-type, got end")
 	}
-	l.send(lengthTypeID)
-	if n == "1" {
+	//	l.send(lengthTypeID)
+	fmt.Println("value now", l.value())
+	if l.value() == "1" {
+		l.ignore()
 		return elevenBitParse
 	}
+	l.ignore()
 	return fifteenBitParse
 }
 
 func fifteenBitParse(l *lex) stateFn {
-	num := ""
+	fmt.Println("parsing fifteen bit parse")
 	for i := 0; i < 15; i++ {
-		c := l.next()
-		if c == "EOF" {
+		if l.next() == "EOF" {
 			return l.errorf(fmt.Sprintf("found end when expecting a %d bit number", 15))
 		}
-		num += c
 	}
-	l.send(fifteenBitNumber)
-	btz, _ := strconv.ParseInt(num, 2, 64)
+	//	l.send(fifteenBitNumber)
+	btz, _ := strconv.ParseInt(l.value(), 2, 64)
+	l.packet.fifteenBitData = int(btz)
+	fmt.Println(l.packet, l.packet.fifteenBitData)
+	l.ignore()
 	return parseBits(int(btz))
 }
 
 func elevenBitParse(l *lex) stateFn {
-	num := ""
+	fmt.Println("parsing 11 bit parse")
 	for i := 0; i < 11; i++ {
-		c := l.next()
-		if c == "EOF" {
+		if l.next() == "EOF" {
 			return l.errorf(fmt.Sprintf("found end when expecting a %d bit number", 11))
 		}
-		num += c
 	}
-	l.send(elevenBitNumber)
-	numSubPacket, _ := strconv.ParseInt(num, 2, 64)
+	//	l.send(elevenBitNumber)
+	numSubPacket, _ := strconv.ParseInt(l.value(), 2, 64)
+	l.packet.elevenBitData = int(numSubPacket)
+	l.ignore()
 	return parseSubPackets(int(numSubPacket))
 }
 
 func parseBits(n int) stateFn {
+	fmt.Println("parse bits")
 	return func(l *lex) stateFn {
 		for i := 0; i < n; i++ {
 			l.next()
 		}
-		l.send(subpackets)
-		return nil
+		l.packet.subpacketData = l.value()
+		l.ignore()
+		l.packets = append(l.packets, l.packet)
+		fmt.Println("parsed bits", l.packet.subpacketData)
+		return versionFn
 	}
 }
 
 func parseSubPackets(n int) stateFn {
+	fmt.Println("parsing sub packets")
 	return func(l *lex) stateFn {
+		fmt.Println("parsing", n, "packets")
 		for i := 0; i < n; i++ {
 			// read six numbers for the header
 			for j := 0; j < 6; j++ {
@@ -294,18 +314,23 @@ func parseSubPackets(n int) stateFn {
 			for {
 				stop := false
 				header := l.next()
-				if header == "0" {
+				if header == "0" || header == "EOF" {
 					stop = true
 				}
 				for j := 0; j < 4; j++ {
-
+					l.next()
 				}
 				if stop {
 					break
 				}
 			}
 		}
-		l.send(subpackets)
-		return nil
+		l.packet.subpacketData = l.value()
+		l.ignore()
+		l.packets = append(l.packets, l.packet)
+		if len(l.input[l.pos:]) < 8 {
+			return nil
+		}
+		return versionFn
 	}
 }
