@@ -23,3 +23,7 @@ func (q *Queue[T]) Dequeue() T {
 	q.data = q.data[1:]
 	return out
 }
+
+func (q *Queue[T]) Internal() []T {
+	return q.data
+}
