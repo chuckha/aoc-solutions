@@ -5,11 +5,11 @@ import (
 )
 
 func main() {
-	o := baseLookup()
-	for k := range o {
-		fmt.Println(k)
-	}
-
+	// o := baseLookup()
+	// for k, v := range o {
+	// 	fmt.Println(k, ":", v)
+	// }
+	fmt.Println(findWays())
 	// log := &internal.Logger{false}
 	// lines := internal.ReadInput()
 	// w := strings.Split(lines[0], " ")
@@ -50,26 +50,6 @@ func main() {
 	// fmt.Println("p2 wins")
 }
 
-func previousStates(k key) key {
-	curTurn := ((k.playerturn) % 2) + 1
-	for i := 3; i <= 9; i++ {
-		if k.playerturn == 1 {
-			score1 := k.score1
-			score2 := k.score2 - k.pos2
-			pos1 := k.pos1
-			pos2 := k.pos2 - i
-		}
-	}
-	return key{
-		playerturn: curTurn,
-		score1:     0,
-		score2:     0,
-		pos1:       0,
-		pos2:       0,
-	}
-
-}
-
 type game struct {
 	player1 *player
 	player2 *player
@@ -107,6 +87,10 @@ type key struct {
 	pos1, pos2     int
 }
 
+func (k key) copy() key {
+	return k
+}
+
 func (k key) String() string {
 	if k.playerturn == 1 {
 		return fmt.Sprintf("P1 %d@%d | P2 %d@%d", k.score1, k.pos1, k.score2, k.pos2)
@@ -134,6 +118,10 @@ func baseLookup() lookup {
 		9: 1,
 	}
 	out := make(lookup)
+
+	// player's turn is really the only thing that matters
+	//
+
 	for score1 := 12; score1 < 20; score1++ {
 		for score2 := 12; score2 < 20; score2++ {
 			for pos1 := 1; pos1 <= 10; pos1++ {
@@ -261,3 +249,97 @@ the number of wins for player 1 when he rolls a 9
 
 
 */
+/*
+
+4, 3
+3 = 1 universe
+4 = 3 universes
+5 = 6 universes
+6 = 7 universes
+7 = 6 universes
+8 = 3 universes
+9 = 1 universe
+          1  3  6   7  6  3  1
+p1 4  -> {7, 8, 9, 10, 1, 2, 3} [7, 8, 9, 10, 1, 2, 3]
+p2 3  -> {6, 7, 8, 9, 10, 1, 2} [6, 7, 8, 9, 10, 1, 2]
+p1 7  -> {10, 1, 2, 3, 4, 5, 6} [17, 8, 9, 10, 11, 12, 13]
+p1 8  -> {1, 2, 3, 4, 5, 6, 7}  [9, 10, 11, 12, 13, 14, 15]
+p2 6  -> {9, 10, 1, 2, 3, 4, 5} [15, 16, 7, 8, 9, 10, 11]
+
+pos => {}
+score & pos => {landing spaces} [scores]
+
+p1 wins = number of wins when player rolls 3 * 1 +
+		number of wins when player rolls 4 * 3 +
+		number of wins when player rolls 5 * 6 +
+		number of wins when player rolls 6 * 7 +
+		number of wins when player rolls 7 * 6 +
+		number of wins when player rolls 8 * 3 +
+		number of wins when player rolls 9 * 1
+
+*/
+func newPos(o, move int) int {
+	out := (o + move) % 10
+	if out == 0 {
+		return 10
+	}
+	return out
+}
+func multiplier(i int) int {
+	switch i {
+	case 3, 9:
+		return 1
+	case 4, 8:
+		return 3
+	case 5, 7:
+		return 6
+	case 6:
+		return 7
+	default:
+		panic("uhhh")
+	}
+}
+
+func findWays() (int, int) {
+	var wins2 func(k key) (int, int)
+	wins2 = func(k key) (int, int) {
+		if k.score1 >= 21 {
+			return 1, 0
+		}
+		if k.score2 >= 21 {
+			return 0, 1
+		}
+		p1Wins := 0
+		p2Wins := 0
+		if k.playerturn == 1 {
+			for i := 3; i <= 9; i++ {
+				np := newPos(k.pos1, i)
+				newk := k.copy()
+				newk.pos1 = np
+				newk.score1 = k.score1 + np
+				newk.playerturn = 2
+				p1w, p2w := wins2(newk)
+				p1Wins += p1w * multiplier(i)
+				p2Wins += p2w * multiplier(i)
+			}
+		}
+		if k.playerturn == 2 {
+			for i := 3; i <= 9; i++ {
+				np := newPos(k.pos2, i)
+				newk := k.copy()
+				newk.pos2 = np
+				newk.score2 = k.score2 + np
+				newk.playerturn = 1
+				p1w, p2w := wins2(newk)
+				p1Wins += p1w * multiplier(i)
+				p2Wins += p2w * multiplier(i)
+			}
+		}
+		return p1Wins, p2Wins
+	}
+	return wins2(key{
+		playerturn: 1,
+		score1:     0, score2: 0,
+		pos1: 4, pos2: 3,
+	})
+}

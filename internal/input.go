@@ -8,11 +8,18 @@ import (
 )
 
 func ReadInput() []string {
+	lines := ReadRawInput()
+	for i, line := range lines {
+		lines[i] = strings.TrimSpace(line)
+	}
+	return lines
+}
+
+func ReadRawInput() []string {
 	scanner := bufio.NewScanner(os.Stdin)
 	lines := []string{}
 	for scanner.Scan() {
 		data := scanner.Text()
-		data = strings.TrimSpace(data)
 		if data == "" {
 			continue
 		}
@@ -22,4 +29,5 @@ func ReadInput() []string {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 	}
 	return lines
+
 }

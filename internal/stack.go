@@ -1,5 +1,10 @@
 package internal
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Stack[T any] struct {
 	items []T
 }
@@ -30,4 +35,17 @@ func (s *Stack[T]) PopAll() []T {
 	out := s.items
 	s.items = make([]T, 0)
 	return out
+}
+
+func (s *Stack[T]) Copy() *Stack[T] {
+	data := make([]T, len(s.items))
+	copy(data, s.items)
+	return &Stack[T]{
+		items: data,
+	}
+}
+func (s *Stack[T]) String() string {
+	var out strings.Builder
+	out.WriteString(fmt.Sprintf("%v", s.items))
+	return out.String()
 }
