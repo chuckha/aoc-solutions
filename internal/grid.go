@@ -1,5 +1,7 @@
 package internal
 
+import "math"
+
 type Grid struct {
 	Data           map[Point]string
 	Length, Height int
@@ -14,6 +16,24 @@ func (g *Grid) String() string {
 		out += "\n"
 	}
 	return out
+}
+func (g *Grid) At(i, j int) string {
+	return g.Data[Point{i, j}]
+}
+func NewGridFromInput(lines []string) *Grid {
+	width := len(lines[0])
+	height := len(lines)
+	g := &Grid{
+		Data:   map[Point]string{},
+		Length: width,
+		Height: height,
+	}
+	for y, line := range lines {
+		for x, c := range line {
+			g.Data[Point{x, y}] = string(c)
+		}
+	}
+	return g
 }
 
 func NewGrid(length, height int, defaultChar string) *Grid {
@@ -74,9 +94,41 @@ func (g *Grid) On() int {
 		}
 	}
 	return count
-
 }
 
-type Point struct {
-	X, Y int
+// Dijkstra
+// cost assumed to be 1
+// wall assumed to be #
+// open spot assumed to be non # character
+func (g *Grid) Dijkstra(start Point) map[Point]int {
+	visited := map[Point]struct{}{}
+	costs := map[Point]int{}
+	for y := 0; y < g.Height; y++ {
+		for x := 0; x < g.Length; x++ {
+			costs[Point{x, y}] = math.MaxInt
+		}
+	}
+	costs[start] = 0
+	q := NewQueue[Point]()
+	q.Enqueue(start)
+	for !q.Empty() {
+		cur := q.Dequeue()
+		if _, ok := visited[cur]; ok {
+			continue
+		}
+		for _, n := range cur.Neighbors() {
+			if _, ok := g.Data[n]; !ok {
+				continue
+			}
+			if g.Data[n] == "#" {
+				continue
+			}
+			if costs[cur]+1 < costs[n] {
+				costs[n] = costs[cur] + 1
+			}
+			q.Enqueue(n)
+		}
+		visited[cur] = struct{}{}
+	}
+	return costs
 }

@@ -16,197 +16,323 @@ func main() {
 		The fourth floor contains nothing relevant.
 	*/
 	lines := internal.ReadInput()
-	mcs := map[string]*microchip{}
-	gns := map[string]*generator{}
+	floorData := make([]floor2, 0)
 	for _, line := range lines {
-		gens, chips := parseItems(line)
-		for k, v := range gens {
-			gns[k] = v
-		}
-		for k, v := range chips {
-			mcs[k] = v
-		}
+		floorData = append(floorData, parseItems2(line))
 	}
-	floors := map[int]*floor{}
-	for i := 1; i <= 4; i++ {
-		floors[i] = newFloor(i)
-		for _, v := range mcs {
-			if v.floor == i {
-				floors[i].addMicrochip(v)
-			}
-		}
-		for _, v := range gns {
-			if v.floor == i {
-				floors[i].addGenerator(v)
-			}
-		}
-	}
-	ele := &elevator{floor: 1}
-	bldg := &building{
-		floors:   floors,
-		elevator: ele,
-	}
-	fmt.Println(bldg)
+	// part 2
+	floorData[0] = append(floorData[0], "ELG", "ELM", "DIG", "DIM")
+	building := newBuilding2(floorData)
+	//	building.validMoves()
+	fmt.Println(queueSolve(building))
 }
 
-func parseItems(line string) (map[string]*generator, map[string]*microchip) {
+func parseItems2(line string) floor2 {
 	words := strings.Split(line, " ")
-	floor := 0
-	switch {
-	case strings.HasPrefix(line, "The first"):
-		floor = 1
-	case strings.HasPrefix(line, "The second"):
-		floor = 2
-	case strings.HasPrefix(line, "The third"):
-		floor = 3
-	case strings.HasPrefix(line, "The fourth"):
-		floor = 4
-	default:
-		panic("unknown line: " + line)
-	}
-	microchips := map[string]*microchip{}
-	generators := map[string]*generator{}
+	components := []string{}
 	for i, word := range words {
 		word = strings.Trim(word, ",.")
 		if word == "generator" {
-			generators[words[i-1]] = newGenerator(words[i-1], floor)
+			components = append(components, strings.ToUpper(string(words[i-1][:2]))+"G")
 		}
 		if word == "microchip" {
 			broken := strings.Split(words[i-1], "-")
-			microchips[broken[0]] = newMicrochip(broken[0], floor)
+			components = append(components, strings.ToUpper(string(broken[0][:2]))+"M")
 		}
 	}
-	return generators, microchips
+	return components
 }
 
-type building struct {
-	floors   map[int]*floor
-	elevator *elevator
+type building2 struct {
+	floors   []floor2
+	elevator int
+	cost     int
 }
 
-func (b *building) String() string {
-	out := fmt.Sprintf("Valid? **%v**\n", b.valid())
-	keys := []int{}
-	for i := range b.floors {
-		keys = append(keys, i)
+func (b building2) componentCount() int {
+	sum := 0
+	for _, f := range b.floors {
+		sum += len(f)
 	}
-	sort.Sort(sort.Reverse(sort.IntSlice(keys)))
-	for _, i := range keys {
-		floor := b.floors[i]
-		if i == b.elevator.floor {
-			out += "ele->"
+	return sum
+}
+
+func (b building2) String() string {
+	var out strings.Builder
+	for i := len(b.floors) - 1; i >= 0; i-- {
+		sort.Sort(sort.StringSlice(b.floors[i]))
+		floor := []string{fmt.Sprintf("F%d", i+1)}
+		if b.elevator == (i) {
+			floor = append(floor, "E")
+		} else {
+			floor = append(floor, ".")
 		}
-		out += fmt.Sprintf("%v\n", floor)
+		for _, c := range b.floors[i] {
+			floor = append(floor, c)
+		}
+		for i := len(floor) - 1; i <= b.componentCount(); i++ {
+			floor = append(floor, " . ")
+		}
+		out.WriteString(strings.Join(floor, "   "))
+		out.WriteString("\n")
 	}
-	return out
+	return out.String()
 }
-func (b *building) valid() bool {
+
+func queueSolve(b building2) int {
+	q := internal.NewQueue[building2]()
+	q.Enqueue(b)
+	// states are unique with a min cost
+	seen := map[string]struct{}{}
+	min := 9999999
+	for !q.Empty() {
+		cur := q.Dequeue()
+		// if _, ok := seen[cur.String()]; !ok {
+		// 	seen[cur.String()] = cur
+		// }
+		validMoves := cur.validMoves()
+		for _, move := range validMoves {
+			newB := cur.applyMove(move)
+			// make the move
+			if _, ok := seen[newB.String()]; ok {
+				continue
+			}
+			if newB.cost > min {
+				continue
+			}
+			if newB.solved() {
+				if newB.cost < min {
+					min = newB.cost
+				}
+				continue
+			}
+			// fmt.Println(move)
+			// fmt.Println(newB)
+			// fmt.Println()
+			seen[newB.String()] = struct{}{}
+			q.Enqueue(newB)
+		}
+		fmt.Println(len(q.Internal()))
+	}
+	return min
+}
+
+func ssolve(b building2) int {
+	seen := map[string]struct{}{}
+	var solve func(building2) int
+
+	solve = func(bb building2) int {
+		if bb.solved() {
+			return 0
+		}
+		min := 99999999
+		seen[bb.String()] = struct{}{}
+		for _, m := range bb.validMoves() {
+			newb := bb.applyMove(m)
+			if _, ok := seen[newb.String()]; ok {
+				continue
+			}
+			//			fmt.Println(newb, m)
+			solution := 1 + solve(newb)
+			if newb.solved() {
+				if solution < min {
+					min = solution
+				}
+			}
+		}
+		return min
+	}
+	return solve(b)
+}
+
+func (b building2) solved() bool {
+	return len(b.floors[3]) == b.componentCount()
+}
+
+func (b building2) valid() bool {
 	for _, floor := range b.floors {
+		//		fmt.Println("floor", i)
 		if !floor.valid() {
+			//			fmt.Println(b)
 			return false
 		}
 	}
 	return true
 }
-func (b *building) solve() {
-	// for each microchip	
-}
 
-type floor struct {
-	number     int
-	microchips map[string]*microchip
-	generators map[string]*generator
-}
-
-func newFloor(level int) *floor {
-	return &floor{
-		number:     level,
-		microchips: make(map[string]*microchip),
-		generators: make(map[string]*generator),
-	}
-}
-func (f *floor) addMicrochip(m *microchip) {
-	f.microchips[m.kind] = m
-}
-func (f *floor) removeMicrochip(kind string) *microchip {
-	out := f.microchips[kind]
-	delete(f.microchips, kind)
-	return out
-}
-func (f *floor) addGenerator(g *generator) {
-	f.generators[g.kind] = g
-}
-func (f *floor) removeGenerator(kind string) *generator {
-	out := f.generators[kind]
-	delete(f.generators, kind)
-	return out
-}
-
-func (f *floor) valid() bool {
-	// if a microchip is on a floor with a non-compatible generator, fail
-	// for every microchip
-	// look at every generator. if ther
-	for _, m := range f.microchips {
-		if _, ok := f.generators[m.kind]; ok {
-			continue
-		}
-		for _, g := range f.generators {
-			if g.kind != m.kind {
-				return false
+func (b building2) validMoves() []move {
+	out := make([]move, 0)
+	currentFloor := b.elevator
+	combos := combos(b.floors[currentFloor])
+	///	fmt.Println("all combos:", combos)
+	for _, combo := range combos {
+		if b.elevator < 3 {
+			// move the combo up
+			m := move{
+				elevatorFrom: b.elevator,
+				elevatorTo:   b.elevator + 1,
+				components:   combo,
 			}
+			newb := b.applyMove(m)
+			if newb.valid() {
+				out = append(out, m)
+			}
+		}
+		if b.elevator >= 1 {
+			// if the floor below is completely empty, don't go down
+			if len(b.floors[b.elevator-1]) == 0 {
+				continue
+			}
+			// never move two things down
+			if len(combo) == 2 {
+				continue
+			}
+			// move the combo down
+			m := move{
+				elevatorFrom: b.elevator,
+				elevatorTo:   b.elevator - 1,
+				components:   combo,
+			}
+			newb := b.applyMove(m)
+			if newb.valid() {
+				out = append(out, m)
+			}
+		}
+		// apply a move to a building
+	}
+	//	fmt.Println("valid moves", out)
+	return out
+}
+
+func (b building2) equal(b2 building2) bool {
+	if b.elevator != b2.elevator {
+		return false
+	}
+	if len(b.floors) != len(b2.floors) {
+		return false
+	}
+	for i, f := range b.floors {
+		if !internal.EqualSlice(f, b2.floors[i]) {
+			return false
 		}
 	}
 	return true
 }
 
-func (f *floor) String() string {
-	return fmt.Sprintf("(%d) 👾 %v ⚡️ %v", f.number, f.microchips, f.generators)
-}
-
-type elevator struct {
-	floor int
-}
-
-type microchip struct {
-	kind  string
-	floor int
-}
-
-func newMicrochip(k string, f int) *microchip {
-	return &microchip{kind: k, floor: f}
-}
-
-func (m *microchip) String() string {
-	return fmt.Sprintf("(%d) M%s", m.floor, strings.ToUpper(string(m.kind[:2])))
-}
-
-type generator struct {
-	kind  string
-	floor int
-}
-
-func newGenerator(k string, f int) *generator {
-	return &generator{
-		kind:  k,
-		floor: f,
+func (b building2) copy() building2 {
+	f2 := make([]floor2, len(b.floors))
+	for i, f := range b.floors {
+		f2[i] = make([]string, len(f))
+		copy(f2[i], f)
+	}
+	return building2{
+		elevator: b.elevator,
+		floors:   f2,
+		cost:     b.cost,
 	}
 }
-func (g *generator) String() string {
-	return fmt.Sprintf("(%d) G%s", g.floor, strings.ToUpper(string(g.kind[:2])))
+
+func (b building2) applyMove(m move) building2 {
+	// fmt.Println()
+	// fmt.Println(b)
+	// fmt.Println(m)
+	newb := b.copy()
+	newb.cost = newb.cost + 1
+	newb.elevator = m.elevatorTo
+	for _, c := range m.components {
+		//		fmt.Println("before appending to the new floor", newb.floors[m.elevatorTo])
+		newb.floors[m.elevatorTo] = append(newb.floors[m.elevatorTo], c)
+		//		fmt.Println("after appending", newb.floors[m.elevatorTo])
+		idx := internal.Search(c, newb.floors[m.elevatorFrom])
+		if idx == -1 {
+			panic("very bad")
+			//			fmt.Println("should not be here")
+			//			fmt.Println(c, newb.floors[m.elevatorFrom])
+			//			continue
+		}
+		//		fmt.Println("before removing from the old floor", newb.floors[m.elevatorFrom])
+		newb.floors[m.elevatorFrom] = append(newb.floors[m.elevatorFrom][:idx], newb.floors[m.elevatorFrom][idx+1:]...)
+		//		fmt.Println("after removing from the old floor", newb.floors[m.elevatorFrom])
+	}
+	// fmt.Println(newb)
+	// fmt.Println()
+	return newb
 }
 
-/*
+type floor2 []string
 
-simple solution
-kafka if reasonable
-consumer group
+func (f floor2) valid() bool {
+	hasGenerator := false
+	for _, c := range f {
+		if strings.HasSuffix(c, "G") {
+			hasGenerator = true
+			break
+		}
+	}
+	// if there is no generator, the floor is safe
+	if !hasGenerator {
+		//		fmt.Println("valid because it has no generator")
+		return true
+	}
 
-depends on how the logs get spread out -- if the
+	// there is at least one generator
+	chips := internal.Set[string]{}
+	gens := internal.Set[string]{}
+	for _, component := range f {
+		// find all chips on floor
+		if strings.HasSuffix(component, "M") {
+			chips.Insert(component[0:2], component[0:2])
+		}
+		if strings.HasSuffix(component, "G") {
+			gens.Insert(component[0:2], component[0:2])
+		}
+	}
+	// it's valid if there are no chips at all
+	if len(chips) == 0 {
+		//		fmt.Println("valid because there are no chips")
+		return true
+	}
 
-worker
+	gensWithMatchingChips := len(gens.Intersect(chips))
+	if gensWithMatchingChips != len(chips) {
+		//		fmt.Println("not all chips have matching generators")
+		return false
+	}
+	//	fmt.Println(chips, gens)
+	//	fmt.Println("valid because all chips have matching generators")
+	return true
+	// if every generator has a matching chip, then it's a safe floor
+}
 
-* preserve ordering
+func matchPrefix(a, b string) bool {
+	return a[0:2] == b[0:2]
+}
 
+func newBuilding2(floorData []floor2) building2 {
+	return building2{
+		floors:   floorData,
+		elevator: 0,
+	}
+}
 
+type move struct {
+	elevatorFrom, elevatorTo int
+	components               []string
+}
 
-*/
+// combos returns every len1, len2 combination of input list
+func combos(input1 []string) [][]string {
+	out := [][]string{}
+
+	// just double elements of the list
+	for i := 0; i < len(input1)-1; i++ {
+		for j := i + 1; j < len(input1); j++ {
+			out = append(out, []string{input1[i], input1[j]})
+		}
+	}
+	// Just single element of the list
+	for _, s := range input1 {
+		out = append(out, []string{s})
+	}
+	return out
+}
