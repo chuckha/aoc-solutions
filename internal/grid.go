@@ -1,32 +1,44 @@
 package internal
 
-import "math"
+import (
+	"math"
+	"strings"
+)
 
 type Grid struct {
 	Data           map[Point]string
+	MinX, MinY     int
 	Length, Height int
+	DefaultChar    string
 }
 
 func (g *Grid) String() string {
-	out := ""
-	for j := 0; j < g.Height; j++ {
-		for i := 0; i < g.Length; i++ {
-			out += g.Data[Point{i, j}]
+	rows := []string{}
+	for j := g.MinY; j < g.Height; j++ {
+		var row strings.Builder
+		for i := g.MinX; i < g.Length; i++ {
+			row.WriteString(g.Data[Point{i, j}])
 		}
-		out += "\n"
+		rows = append(rows, row.String())
 	}
-	return out
+	return strings.Join(rows, "\n")
 }
+
 func (g *Grid) At(i, j int) string {
-	return g.Data[Point{i, j}]
+	if v, ok := g.Data[Point{i, j}]; ok {
+		return v
+	}
+	return g.DefaultChar
 }
+
 func NewGridFromInput(lines []string) *Grid {
 	width := len(lines[0])
 	height := len(lines)
 	g := &Grid{
-		Data:   map[Point]string{},
-		Length: width,
-		Height: height,
+		Data:        map[Point]string{},
+		Length:      width,
+		Height:      height,
+		DefaultChar: ".",
 	}
 	for y, line := range lines {
 		for x, c := range line {
@@ -86,14 +98,55 @@ func (g *Grid) Rect(x, y int) {
 // On counts the number of grid points that are on
 func (g *Grid) On() int {
 	count := 0
-	for j := 0; j < g.Height; j++ {
-		for i := 0; i < g.Length; i++ {
+	for j := g.MinY; j < g.Height; j++ {
+		for i := g.MinX; i < g.Length; i++ {
 			if g.Data[Point{i, j}] == "#" {
 				count++
 			}
 		}
 	}
 	return count
+}
+
+// Rotate rotates the grid 90 degrees to the right (clockwise)
+func (g *Grid) Rotate() {
+	newdata := make(map[Point]string)
+	for y := 0; y < g.Height; y++ {
+		for x := 0; x < g.Length; x++ {
+			newdata[Point{(g.Length - 1) - y, x}] = g.At(x, y)
+		}
+	}
+	g.Height, g.Length = g.Length, g.Height
+	g.Data = newdata
+}
+
+func (g *Grid) Flip() {
+	newdata := make(map[Point]string)
+	for y := 0; y < g.Height; y++ {
+		for x := 0; x < g.Length; x++ {
+			newdata[Point{(g.Length - 1) - x, y}] = g.At(x, y)
+		}
+	}
+	g.Data = newdata
+}
+
+// One line returns the string value of the grid where rows are separated by /
+func (g *Grid) OneLine() string {
+	return strings.Replace(g.String(), "\n", "/", -1)
+}
+
+func (g *Grid) SubGrid(minx, maxx, miny, maxy int) *Grid {
+	out := &Grid{
+		Length: maxx + 1 - minx,
+		Height: maxy + 1 - miny,
+		Data:   make(map[Point]string),
+	}
+	for y := g.MinY; y <= maxy-miny; y++ {
+		for x := g.MinX; x <= maxx-minx; x++ {
+			out.Data[Point{x, y}] = g.At(x+minx, y+miny)
+		}
+	}
+	return out
 }
 
 // Dijkstra
@@ -131,4 +184,12 @@ func (g *Grid) Dijkstra(start Point) map[Point]int {
 		visited[cur] = struct{}{}
 	}
 	return costs
+}
+
+func (g *Grid) Center() Point {
+	return Point{g.Length / 2, g.Height / 2}
+}
+
+func (g *Grid) Set(i, j int, val string) {
+	g.Data[Point{i, j}] = val
 }
