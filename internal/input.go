@@ -31,3 +31,16 @@ func ReadRawInput() []string {
 	return lines
 
 }
+
+func ReadRealRawInput() []string {
+	scanner := bufio.NewScanner(os.Stdin)
+	lines := []string{}
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+	}
+	return lines
+
+}

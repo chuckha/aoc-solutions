@@ -17,7 +17,7 @@ func (g *Grid) String() string {
 	for j := g.MinY; j < g.Height; j++ {
 		var row strings.Builder
 		for i := g.MinX; i < g.Length; i++ {
-			row.WriteString(g.Data[Point{i, j}])
+			row.WriteString(g.At(i, j))
 		}
 		rows = append(rows, row.String())
 	}
@@ -46,6 +46,26 @@ func NewGridFromInput(lines []string) *Grid {
 		}
 	}
 	return g
+}
+func (g *Grid) Copy() *Grid {
+	out := &Grid{
+		MinX:   g.MinX,
+		MinY:   g.MinY,
+		Length: g.Length,
+		Height: g.Height,
+		Data:   make(map[Point]string),
+	}
+	for k, v := range g.Data {
+		out.Data[k] = v
+	}
+	return out
+}
+
+func InitGrid() *Grid {
+	return &Grid{
+		Data:        make(map[Point]string),
+		DefaultChar: ".",
+	}
 }
 
 func NewGrid(length, height int, defaultChar string) *Grid {

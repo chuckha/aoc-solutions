@@ -49,3 +49,6 @@ func (s *Stack[T]) String() string {
 	out.WriteString(fmt.Sprintf("%v", s.items))
 	return out.String()
 }
+func (s *Stack[T]) Depth() int {
+	return len(s.items)
+}

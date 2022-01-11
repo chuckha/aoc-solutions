@@ -1,0 +1,40 @@
+# set up
+set b 79
+set c b
+jnz a 2
+jnz 1 5
+mul b 100 
+sub b -100000 # 107900
+set c b
+sub c -17000 # 124900
+
+set f 1 # from jnz 1 -23
+set d 2
+
+
+set e 2 ## from jnz g -13
+
+# this part adds 1 to e, stores it in d, sets f to 0 when g * e == b
+set g d # start at 2
+mul g e # start at 4, goes up to 53950 and then sets f to 0 and continues to 107900
+sub g b # start at -107896
+jnz g 2
+set f 0 # goal this will only ever get set if b is divisble by e (2, 1)
+sub e -1 # 2 --1 =3
+set g e # 3
+sub g b # 107897
+jnz g -8 # This is the goal here, f will be 0, e will be 107900
+
+sub d -1 # d+1
+set g d # g = 3, d needs to be 107900 (need to do the above loop, 107898 times)
+sub g b #
+jnz g -13
+
+jnz f 2
+sub h -1 # first time through this is skipped, h is not set first time through
+set g b  # g = 107900 (when b is 124900, program terminates)
+sub g c # 107900 - 124900
+jnz g 2 # when g == 0, the program terminates
+jnz 1 3
+sub b -17 # this must happen 1000 times
+jnz 1 -23

@@ -5,77 +5,66 @@ import (
 	"strings"
 )
 
-type Node[T any] struct {
-	Next *Node[T]
-	Prev *Node[T]
+type DLL[T any] struct {
+	Next *DLL[T]
+	Prev *DLL[T]
 	Data T
 }
 
-func NewNode[T any](data T) *Node[T] {
-	c := &Node[T]{
+func NewDLL[T any](data T) *DLL[T] {
+	return &DLL[T]{
 		Data: data,
 	}
-	c.Next = c
-	c.Prev = c
-	return c
 }
-
-func (n *Node[T]) Forward(num int) *Node[T] {
-	cur := n
-	for i := 0; i < num; i++ {
-		cur = cur.Next
-	}
-	return cur
-}
-
-func (n *Node[T]) Len() int {
-	count := 1
-	root := n
-	cur := n
-	for cur.Next != root {
-		cur = cur.Next
-		count++
-	}
-	return count
-}
-
-func (n *Node[T]) Insert(item T) *Node[T] {
-	newNode := NewNode(item)
+func (n *DLL[T]) InsertAfter(d T) *DLL[T] {
+	newNode := NewDLL(d)
 	next := n.Next
-	n.Next = newNode
-	newNode.Prev = n
+	if next != nil {
+		next.Prev = newNode
+	}
 	newNode.Next = next
-	next.Prev = newNode
+	newNode.Prev = n
+	n.Next = newNode
 	return newNode
 }
-
-func (n *Node[T]) Remove() *Node[T] {
-	next := n.Next
+func (n *DLL[T]) InsertBefore(d T) *DLL[T] {
+	newDLL := NewDLL(d)
+	newDLL.Next = n
 	prev := n.Prev
-	prev.Next = next
-	next.Prev = prev
-	return prev
+	newDLL.Prev = prev
+	if prev != nil {
+		prev.Next = newDLL
+	}
+	n.Prev = newDLL
+	return newDLL
 }
 
-func (n *Node[T]) String() string {
-	root := n
-	cur := n
+func (d *DLL[T]) Remove() *DLL[T] {
+	next := d.Next
+	prev := d.Prev
+	if prev != nil {
+		prev.Next = next
+	}
+	if next != nil {
+		next.Prev = prev
+	}
+	return prev
+
+}
+func (d *DLL[T]) String() string {
+	cur := d
 	var out strings.Builder
-	out.WriteString(fmt.Sprintf("%v -> ", cur.Data))
-	cur = cur.Next
-	for cur != root {
+	for cur != nil {
 		out.WriteString(fmt.Sprintf("%v -> ", cur.Data))
 		cur = cur.Next
 	}
 	return out.String()
 }
-
-func (n *Node[T]) Swap(i, j int) {
-	root := n
-	first := root.Forward(i)
-	second := root.Forward(j)
-	firstPrev := first.Remove()
-	firstPrev.Insert(second.Data)
-	secondPrev := second.Remove()
-	secondPrev.Insert(first.Data)
+func (d *DLL[T]) Len() int {
+	out := 0
+	for d != nil {
+		out++
+		d = d.Next
+	}
+	return out
 }
