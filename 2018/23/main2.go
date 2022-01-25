@@ -7,7 +7,7 @@ package main
 // 	"strconv"
 // 	"strings"
 
-// 	"github.com/chuckha/aoc-solutions/internal"
+// 	"github.com/chuckha/aoc-solutions/internal/input"
 // )
 
 // func main2() {

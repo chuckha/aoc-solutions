@@ -7,12 +7,15 @@ import (
 	"strings"
 )
 
-func ReadInput() []string {
-	lines := ReadRawInput()
+func CleanInput(lines []string) []string {
 	for i, line := range lines {
 		lines[i] = strings.TrimSpace(line)
 	}
 	return lines
+}
+
+func ReadInput() []string {
+	return CleanInput(ReadRawInput())
 }
 
 func ReadRawInput() []string {
@@ -42,5 +45,4 @@ func ReadRealRawInput() []string {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 	}
 	return lines
-
 }

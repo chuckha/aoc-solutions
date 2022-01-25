@@ -40,23 +40,6 @@ func (c *CircularLinkedList[T]) InsertAfter(data T) *CircularLinkedList[T] {
 	return n
 }
 
-// 0 <- 0 -> 0
-//
-// 0 <- 1 -> 0
-// 1 <- 0 -> 1
-//
-// 2
-// 1 <- 0 -> 1
-// 0 <- 1 -> 0
-// 1 <- 2 -> 0
-
-// 0 -> 1 -> 2 -> 3 -> 4
-// c = 2
-// prev = 1
-// next = 3
-// 1 -> 3
-// 1 <- 3
-
 func (c *CircularLinkedList[T]) Remove() *CircularLinkedList[T] {
 	prev := c.Prev
 	next := c.Next

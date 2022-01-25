@@ -13,15 +13,14 @@ type Grid struct {
 }
 
 func (g *Grid) String() string {
-	rows := []string{}
+	var out strings.Builder
 	for j := g.MinY; j < g.Height; j++ {
-		var row strings.Builder
 		for i := g.MinX; i < g.Length; i++ {
-			row.WriteString(g.At(i, j))
+			out.WriteString(g.At(i, j))
 		}
-		rows = append(rows, row.String())
+		out.WriteString("\n")
 	}
-	return strings.Join(rows, "\n")
+	return out.String()
 }
 
 func (g *Grid) At(i, j int) string {
@@ -78,6 +77,15 @@ func NewGrid(length, height int, defaultChar string) *Grid {
 		for i := 0; i < g.Length; i++ {
 			g.Data[Point{i, j}] = defaultChar
 		}
+	}
+	return g
+}
+
+func NewGridNoInit(length, height int, defaultChar string) *Grid {
+	g := &Grid{
+		Data:   map[Point]string{},
+		Length: length,
+		Height: height,
 	}
 	return g
 }
@@ -212,4 +220,20 @@ func (g *Grid) Center() Point {
 
 func (g *Grid) Set(i, j int, val string) {
 	g.Data[Point{i, j}] = val
+}
+
+func (g *Grid) Grow(p Point, val string) {
+	if p.X < g.MinX {
+		g.MinX = p.X
+	}
+	if p.X > g.Length {
+		g.Length = p.X
+	}
+	if p.Y < g.MinY {
+		g.MinY = p.Y
+	}
+	if p.Y > g.Height {
+		g.Height = p.Y
+	}
+	g.Data[p] = val
 }
