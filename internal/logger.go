@@ -2,18 +2,16 @@ package internal
 
 import "fmt"
 
-type Logger struct {
-	Debug bool
-}
+type Debug bool
 
-func (l *Logger) Println(a ...interface{}) {
-	if l.Debug {
+func (d Debug) Println(a ...interface{}) {
+	if d {
 		fmt.Println(a...)
 	}
 }
 
-func (l *Logger) Printf(f string, a ...interface{}) {
-	if l.Debug {
+func (d Debug) Printf(f string, a ...interface{}) {
+	if d {
 		fmt.Printf(f, a...)
 	}
 }

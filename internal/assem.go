@@ -31,6 +31,10 @@ func (a *Assem) Run() bool {
 	return a.InstIdx >= len(a.Instructions)
 }
 
+func (a *Assem) Exec(inst Instruction) {
+	inst.Run(a)
+}
+
 func (a *Assem) GetValOrNum(v string) int {
 	if v[0] >= 'a' && v[0] <= 'z' {
 		return a.GetVal(v)
@@ -107,4 +111,23 @@ func (c Copy) Run(a *Assem) {
 
 func (c Copy) String() string {
 	return fmt.Sprintf("cpy %v %v", c.X, c.Y)
+}
+
+type Noop struct{}
+
+func (n Noop) Run(a *Assem) {}
+func (n Noop) String() string {
+	return "noop"
+}
+
+type AddX struct {
+	X   string
+	Val int
+}
+
+func (a AddX) Run(assem *Assem) {
+	assem.SetReg(a.X, assem.GetVal(a.X)+a.Val)
+}
+func (a AddX) String() string {
+	return fmt.Sprintf("addx %d", a.Val)
 }

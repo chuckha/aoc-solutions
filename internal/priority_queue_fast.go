@@ -13,7 +13,6 @@ type FastPQ[T any] []*FastItem[T]
 func (pq FastPQ[T]) Len() int { return len(pq) }
 
 func (pq FastPQ[T]) Less(i, j int) bool {
-	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
 	if pq[i].Priority < pq[j].Priority {
 		return true
 	}

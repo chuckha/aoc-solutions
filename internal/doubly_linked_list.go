@@ -16,6 +16,7 @@ func NewDLL[T any](data T) *DLL[T] {
 		Data: data,
 	}
 }
+
 func (n *DLL[T]) InsertAfter(d T) *DLL[T] {
 	newNode := NewDLL(d)
 	next := n.Next
@@ -27,6 +28,7 @@ func (n *DLL[T]) InsertAfter(d T) *DLL[T] {
 	n.Next = newNode
 	return newNode
 }
+
 func (n *DLL[T]) InsertBefore(d T) *DLL[T] {
 	newDLL := NewDLL(d)
 	newDLL.Next = n

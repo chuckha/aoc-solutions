@@ -10,8 +10,8 @@ func NewQueue[T any]() *Queue[T] {
 	}
 }
 
-func (q *Queue[T]) Enqueue(item T) {
-	q.data = append(q.data, item)
+func (q *Queue[T]) Enqueue(items ...T) {
+	q.data = append(q.data, items...)
 }
 
 func (q *Queue[T]) Empty() bool {

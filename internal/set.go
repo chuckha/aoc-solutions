@@ -31,3 +31,47 @@ func (s Set[T]) Union(s2 Set[T]) Set[T] {
 	}
 	return un
 }
+
+type SetV2 map[string]struct{}
+
+func (s SetV2) Remove(key string) SetV2 {
+	out := s.Copy()
+	delete(out, key)
+	return out
+}
+
+func (s SetV2) Add(key string) SetV2 {
+	out := s.Copy()
+	out[key] = struct{}{}
+	return out
+}
+
+func (s SetV2) Copy() SetV2 {
+	out := make(SetV2)
+	for k, v := range s {
+		out[k] = v
+	}
+	return out
+}
+
+type SetV3 map[string]int
+
+func (s SetV3) Remove(key string) SetV3 {
+	out := s.Copy()
+	delete(out, key)
+	return out
+}
+
+func (s SetV3) Add(key string, val int) SetV3 {
+	out := s.Copy()
+	out[key] = val
+	return out
+}
+
+func (s SetV3) Copy() SetV3 {
+	out := make(SetV3)
+	for k, v := range s {
+		out[k] = v
+	}
+	return out
+}
