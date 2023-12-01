@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/chuckha/aoc-solutions/internal"
-	"github.com/chuckha/aoc-solutions/internal/input"
 )
 
 // 2552 is too low (part 2)
@@ -17,7 +16,9 @@ const (
 )
 
 func main() {
-	lines := input.GetRawInput(2019, 20)
+	// oops i broke this
+	lines := []string{""}
+	//	lines := input.GetRawInput(2019, 20)
 	g := graphFromInput(lines)
 	last := solve(g)
 	fmt.Println(last.steps)
